@@ -1,0 +1,69 @@
+<!-- Hermes v0.4.2 — Operational Memory Panel -->
+<section id="memory-panel" class="memory-panel hidden">
+  <div class="memory-header">
+    <h3>Memória Operacional do Conselho</h3>
+    <button class="close-btn" id="memory-close">×</button>
+  </div>
+
+  <div class="memory-content">
+    <!-- Summary Stats -->
+    <div class="memory-summary">
+      <div class="stat-card">
+        <div class="stat-label">Agentes Treinados</div>
+        <div class="stat-value" id="trained-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Fontes Lidas</div>
+        <div class="stat-value" id="sources-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Claims Extraídos</div>
+        <div class="stat-value" id="claims-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Regras Novas</div>
+        <div class="stat-value" id="rules-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lacunas Abertas</div>
+        <div class="stat-value" id="gaps-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Custo (USD)</div>
+        <div class="stat-value" id="cost-value">$0.00</div>
+      </div>
+    </div>
+
+    <!-- Agent-Specific Learning -->
+    <div class="memory-section">
+      <h4>Aprendizagem do Agente</h4>
+      <div id="agent-learning" class="agent-learning-container">
+        <p class="placeholder">Selecione um agente para ver aprendizagem</p>
+      </div>
+    </div>
+
+    <!-- Sources Tab -->
+    <div class="memory-section">
+      <h4>Fontes Estudadas</h4>
+      <div id="sources-list" class="sources-list">
+        <p class="placeholder">Carregando fontes...</p>
+      </div>
+    </div>
+
+    <!-- Uncertainties Tab -->
+    <div class="memory-section">
+      <h4>Incertezas Abertas</h4>
+      <div id="uncertainties-list" class="uncertainties-list">
+        <p class="placeholder">Carregando incertezas...</p>
+      </div>
+    </div>
+
+    <!-- Cost Breakdown -->
+    <div class="memory-section">
+      <h4>Custo de Modelos</h4>
+      <div id="cost-breakdown" class="cost-breakdown">
+        <p class="placeholder">Carregando custos...</p>
+      </div>
+    </div>
+  </div>
+</section>

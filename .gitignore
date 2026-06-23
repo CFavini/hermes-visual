@@ -1,0 +1,68 @@
+# Hermes v0.4-alpha — local-first safety
+
+# Private SQLite databases and local state
+db/private/
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Backups and private exports
+backups/
+exports/private/
+
+# Logs
+logs/
+*.log
+
+# Environment files and secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Sensitive documents / quarantine zones
+docs/private/
+data/private/
+documents/
+sensitive/
+S3/
+S4/
+**/S3/
+**/S4/
+*.docx
+*.xlsx
+*.pdf
+*.zip
+*.7z
+*.rar
+
+# Python cache and local tooling
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary files
+tmp/
+temp/

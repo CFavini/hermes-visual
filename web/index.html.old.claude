@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hermes v0.4.3 — Escritório Vivo</title>
+<style>
+  :root{
+    --bg:#070d14; --bg-2:#0b1722; --panel:#0e1b28; --panel-2:#102234;
+    --line:#1d3145; --line-soft:#16283a;
+    --ink:#eaf3fb; --ink-dim:#8aa1b6; --ink-faint:#5a7187;
+    --gold:#d6ad60; --gold-soft:#9a7d40;
+    --danger:#ff4d5a; --warn:#ffb020; --ok:#4dd4ac; --quar:#8f5cff;
+    --floor:#16344a; --floor-hi:#1d4258; --wall-r:#0d2334; --wall-l:#091a28;
+    --shadow:0 18px 40px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 70% -10%, rgba(214,173,96,.06), transparent 60%),
+      radial-gradient(900px 600px at 10% 110%, rgba(143,92,255,.05), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font:14px/1.45 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overflow:hidden;
+  }
+  .app{display:grid;grid-template-columns:264px 1fr 320px;grid-template-rows:1fr auto;height:100vh}
+  @media (max-width:1100px){ .app{grid-template-columns:0 1fr 0} .rail,.inspector{display:none} }
+
+  /* ---------- LEFT COMMAND RAIL ---------- */
+  .rail{grid-row:1/3;border-right:1px solid var(--line);background:linear-gradient(180deg,var(--panel),var(--bg-2));
+        padding:18px 16px;display:flex;flex-direction:column;gap:16px;overflow:auto}
+  .brand{display:flex;gap:11px;align-items:center}
+  .brand .seal{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:22px;font-weight:700;
+        color:#1a130a;background:linear-gradient(135deg,var(--gold),#b88a34);box-shadow:0 0 0 1px rgba(214,173,96,.4),0 8px 18px rgba(214,173,96,.25)}
+  .brand .eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-soft);margin:0}
+  .brand h1{font-size:15px;margin:1px 0 0;letter-spacing:.01em}
+  .brand small{color:var(--ink-faint);font-size:11px}
+
+  .mode-pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;letter-spacing:.04em;
+        padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#0a1622;color:var(--ink-dim);width:fit-content}
+  .mode-pill .led{width:8px;height:8px;border-radius:50%;background:var(--ink-faint)}
+  .mode-pill.live{color:var(--ok);border-color:rgba(77,212,172,.4)} .mode-pill.live .led{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .mode-pill.offline{color:var(--warn);border-color:rgba(255,176,32,.4)} .mode-pill.offline .led{background:var(--warn)}
+
+  .rail h2{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:6px 0 0}
+  .btn{appearance:none;border:1px solid var(--line);background:#0c1a28;color:var(--ink);font:inherit;font-weight:600;
+        padding:11px 13px;border-radius:10px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .btn:hover{border-color:var(--gold-soft);background:#10212f}
+  .btn.primary{background:linear-gradient(135deg,var(--gold),#bd9039);color:#191205;border-color:transparent}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn small{font-weight:500;color:var(--ink-faint)}
+  .btn.primary small{color:#3a2c0c}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .legend{display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--ink-dim)}
+  .legend .row{display:flex;align-items:center;gap:8px}
+  .legend .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,.15)}
+
+  .lock{margin-top:auto;font-size:11px;color:var(--ink-faint);border:1px dashed var(--line);border-radius:9px;padding:9px 11px;background:#0a1420}
+  .lock b{color:var(--ink-dim);display:block;margin-bottom:2px;letter-spacing:.03em}
+
+  /* ---------- STAGE ---------- */
+  .stage{position:relative;overflow:hidden;cursor:grab;background:
+      radial-gradient(1100px 800px at 50% 35%, rgba(28,58,82,.35), transparent 70%);}
+  .stage.dragging{cursor:grabbing}
+  .stage-top{position:absolute;z-index:8;left:18px;top:14px;right:18px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
+  .stage-title .eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-soft);margin:0}
+  .stage-title h3{margin:2px 0 0;font-size:18px;letter-spacing:.01em;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+  .stage-title p{margin:3px 0 0;font-size:11.5px;color:var(--ink-dim);max-width:430px}
+  .zoomctl{pointer-events:auto;display:flex;gap:6px}
+  .zoomctl button{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#0c1a28cc;color:var(--ink);
+        font-size:16px;cursor:pointer;backdrop-filter:blur(4px)}
+  .zoomctl button:hover{border-color:var(--gold-soft)}
+
+  #viewport{position:absolute;inset:0}
+  #world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+  #floorplan{position:absolute;left:0;top:0;display:block}
+  #tokens{position:absolute;left:0;top:0;pointer-events:none}
+
+  .banner{position:absolute;z-index:8;left:50%;bottom:14px;transform:translateX(-50%);
+        font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#0c0a05;
+        background:linear-gradient(90deg,var(--gold),#caa04e);padding:6px 16px;border-radius:999px;
+        box-shadow:0 6px 18px rgba(0,0,0,.4);white-space:nowrap}
+
+  /* ---------- AGENT TOKENS ---------- */
+  .agent{position:absolute;width:46px;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;z-index:5;text-align:center}
+  .agent-body{width:38px;height:46px;margin:0 auto;border-radius:13px 13px 9px 9px;display:grid;place-items:center;
+        font-size:19px;color:#0a0f15;
+        background:linear-gradient(180deg, color-mix(in srgb, var(--c) 86%, white 14%), var(--c));
+        border:1px solid rgba(255,255,255,.25);
+        box-shadow:0 7px 10px rgba(0,0,0,.5), inset 0 2px 4px rgba(255,255,255,.3)}
+  .agent::after{content:"";position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);
+        width:30px;height:9px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(2px);z-index:-1}
+  .agent-name{margin-top:3px;font-size:10px;font-weight:600;color:#eaf6ff;text-shadow:0 1px 3px #000;white-space:nowrap}
+  .agent-bubble{position:absolute;left:50%;bottom:62px;transform:translateX(-50%);font-size:9.5px;line-height:1;
+        padding:4px 7px;border-radius:999px;white-space:nowrap;color:var(--ink);
+        background:rgba(6,12,18,.94);border:1px solid var(--line);box-shadow:0 4px 10px rgba(0,0,0,.4)}
+  .agent-bubble::after{content:"";position:absolute;left:50%;bottom:-4px;transform:translateX(-50%);
+        border:4px solid transparent;border-top-color:rgba(6,12,18,.94)}
+  .agent.sel .agent-body{box-shadow:0 0 0 3px var(--gold),0 7px 12px rgba(0,0,0,.6)}
+  .agent.crit .agent-body{box-shadow:0 0 0 3px var(--danger),0 0 22px rgba(255,77,90,.7)}
+
+  .agent.st-working .agent-body{animation:bob 1.2s ease-in-out infinite}
+  .agent.st-idle .agent-body{animation:breath 2.6s ease-in-out infinite}
+  .agent.st-audit .agent-body{animation:scan 1.8s ease-in-out infinite}
+  .agent.st-wait .agent-body{animation:wait 2s ease-in-out infinite}
+  .agent.st-quar .agent-body{animation:quar 1.7s ease-in-out infinite}
+  .agent.st-legal .agent-body{animation:legal 1.6s ease-in-out infinite}
+  .agent.walking .agent-body{animation:walk .42s ease-in-out infinite}
+
+  @keyframes bob{0%,100%{transform:translateY(0)}25%{transform:translateY(-4px)}50%{transform:translateY(0)}75%{transform:translateY(-2px)}}
+  @keyframes breath{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.02)}}
+  @keyframes scan{0%,100%{box-shadow:0 7px 10px rgba(0,0,0,.5),0 0 0 0 rgba(255,176,32,.5)}50%{box-shadow:0 7px 10px rgba(0,0,0,.5),0 0 0 8px rgba(255,176,32,0)}}
+  @keyframes wait{0%,100%{box-shadow:0 7px 10px rgba(0,0,0,.5),0 0 0 0 rgba(214,173,96,.6)}50%{box-shadow:0 7px 10px rgba(0,0,0,.5),0 0 16px 2px rgba(214,173,96,.5)}}
+  @keyframes quar{0%,100%{box-shadow:0 7px 10px rgba(0,0,0,.5),0 0 10px 0 rgba(143,92,255,.5)}50%{box-shadow:0 7px 10px rgba(0,0,0,.5),0 0 26px 4px rgba(143,92,255,.8)}}
+  @keyframes legal{0%,100%{filter:none}50%{filter:brightness(1.25)}}
+  @keyframes walk{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-3px) rotate(3deg)}}
+
+  /* ---------- INSPECTOR ---------- */
+  .inspector{grid-row:1/3;border-left:1px solid var(--line);background:linear-gradient(180deg,var(--panel),var(--bg-2));
+        padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto}
+  .card{border:1px solid var(--line);border-radius:12px;background:var(--panel-2);padding:13px 14px}
+  .card h4{margin:0 0 10px;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-faint);
+        display:flex;justify-content:space-between;align-items:center}
+  .card h4 .tag{font-size:10px;letter-spacing:.03em;text-transform:none;color:var(--gold);font-weight:600}
+  .insp-head{display:flex;gap:11px;align-items:center}
+  .insp-avatar{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:21px;color:#0a0f15;flex:none;
+        background:linear-gradient(180deg,color-mix(in srgb,var(--c,#888) 85%,white 15%),var(--c,#888));border:1px solid rgba(255,255,255,.25)}
+  .insp-head .nm{font-size:15px;font-weight:700} .insp-head .rl{font-size:11.5px;color:var(--ink-dim)}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:12px;margin-top:11px}
+  .kv dt{color:var(--ink-faint)} .kv dd{margin:0;text-align:right;color:var(--ink)}
+  .chip{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+  .chip.s4{color:var(--quar);border-color:rgba(143,92,255,.45)}
+  .chip.block{color:var(--danger);border-color:rgba(255,77,90,.45)}
+  .empty{color:var(--ink-faint);font-size:12.5px;text-align:center;padding:14px 4px}
+
+  .tasklist{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto}
+  .task{border:1px solid var(--line);border-left-width:3px;border-radius:9px;padding:8px 10px;background:#0b1825}
+  .task .t{font-size:12.5px;font-weight:600;line-height:1.3}
+  .task .m{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+  .pri{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:5px}
+  .pri.P0{background:var(--danger);color:#fff}.pri.P1{background:var(--warn);color:#241700}.pri.P2{background:#2a3e51;color:var(--ink-dim)}
+  .st{font-size:9.5px;color:var(--ink-dim);padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+  .task.blocked{border-left-color:var(--danger)} .task.in_progress{border-left-color:var(--ok)} .task.pending{border-left-color:var(--warn)}
+
+  /* ---------- STATUS BAR ---------- */
+  .statusbar{grid-column:2/3;display:flex;gap:18px;align-items:center;flex-wrap:wrap;
+        border-top:1px solid var(--line);background:#091521;padding:9px 18px;font-size:11.5px;color:var(--ink-dim)}
+  .statusbar b{color:var(--ink);font-weight:600}
+  .statusbar .v0{color:var(--gold);font-weight:700;letter-spacing:.04em}
+  .statusbar .sep{width:1px;height:14px;background:var(--line)}
+
+  /* ---------- TOAST ---------- */
+  #toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%) translateY(16px);z-index:20;opacity:0;
+        max-width:520px;background:#0c1a28;border:1px solid var(--gold-soft);color:var(--ink);
+        padding:11px 16px;border-radius:11px;box-shadow:var(--shadow);font-size:12.5px;transition:opacity .25s,transform .25s;pointer-events:none}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (prefers-reduced-motion: reduce){
+    .agent .agent-body{animation:none !important}
+    #toast{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT RAIL -->
+  <aside class="rail">
+    <div class="brand">
+      <div class="seal">♛</div>
+      <div>
+        <p class="eyebrow">Arconte Supremo</p>
+        <h1>Hermes Visual</h1>
+        <small>Escritório Vivo · v0.4.3</small>
+      </div>
+    </div>
+    <span id="mode" class="mode-pill"><span class="led"></span><span id="mode-label">conectando…</span></span>
+
+    <h2>Comando local</h2>
+    <button class="btn primary" id="btn-cycle">Rodar Ciclo Hermes <small>POST /api/cycle</small></button>
+    <button class="btn" id="btn-refresh">Atualizar dados <small>GET</small></button>
+    <button class="btn" id="btn-reset">Recentralizar câmera <small>⌂</small></button>
+
+    <h2>Legenda de salas</h2>
+    <div class="legend">
+      <div class="row"><span class="sw" style="background:#16344a"></span>Operacional (S0–S2)</div>
+      <div class="row"><span class="sw" style="background:#3b1d5f"></span>Cofre / quarentena (S4)</div>
+      <div class="row"><span class="sw" style="background:#5a1620"></span>Frente crítica / bloqueada</div>
+    </div>
+
+    <div class="lock">
+      <b>Trava operacional</b>
+      Local. Sem cloud, sem ação externa, sem pessoa jurídica. Sala e estado vêm da API; o caminhar é coreografia visual sobre o estado real.
+    </div>
+  </aside>
+
+  <!-- STAGE -->
+  <section class="stage" id="stage">
+    <div class="stage-top">
+      <div class="stage-title">
+        <p class="eyebrow">Planta isométrica viva</p>
+        <h3>O Conselho do Arconte em operação</h3>
+        <p>Arraste para mover · scroll para zoom · clique num agente ou numa sala.</p>
+      </div>
+      <div class="zoomctl">
+        <button id="zoom-out" title="Menos zoom">−</button>
+        <button id="zoom-in" title="Mais zoom">+</button>
+      </div>
+    </div>
+    <div id="viewport">
+      <div id="world">
+        <svg id="floorplan" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div id="tokens"></div>
+      </div>
+    </div>
+    <div class="banner">Simulação local — sem ação externa</div>
+  </section>
+
+  <!-- INSPECTOR -->
+  <aside class="inspector">
+    <div class="card">
+      <h4>Ficha do agente <span class="tag" id="insp-tag">nenhum</span></h4>
+      <div id="inspector"><div class="empty">Clique num agente no escritório para ver sua ficha.</div></div>
+    </div>
+    <div class="card">
+      <h4>Tarefas <span class="tag" id="task-filter">todas as salas</span></h4>
+      <div id="tasks" class="tasklist"><div class="empty">Carregando tarefas…</div></div>
+    </div>
+  </aside>
+
+  <!-- STATUS BAR -->
+  <footer class="statusbar">
+    <span class="v0">v0.4.3 sandbox</span><span class="sep"></span>
+    <span id="sb-cycle">Ciclo: não rodado</span><span class="sep"></span>
+    <span id="sb-critical">Frente crítica: <b>n/d</b></span><span class="sep"></span>
+    <span id="sb-p0">P0: <b>n/d</b></span><span class="sep"></span>
+    <span id="sb-alerts">Alertas abertos: <b>0</b></span><span class="sep"></span>
+    <span id="sb-ext">Ação externa: <b>0</b></span>
+  </footer>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   Hermes v0.4.3 — Escritório Vivo (isométrico)
+   Frontend puro. Lê endpoints reais; não altera backend/SQLite/v0.4.2.
+   Fallback de PRÉVIA OFFLINE = snapshot exato do SQLite v0.4.2 (dados reais),
+   usado apenas quando a API está inacessível. Ao vivo sempre tem prioridade.
+   ============================================================================ */
+
+const SNAPSHOT = {"rooms": [{"id": 2, "company_id": 2, "name": "Conselho / Reunião", "slug": "conselho-reuniao", "room_type": "meeting", "status": "active", "grid_col": 1, "grid_row": 1, "grid_w": 4, "grid_h": 2, "security_level": "S1", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Conselho do Arconte", "company_color": "#7aa2ff", "company_risk": 2}, {"id": 1, "company_id": 1, "name": "Sala Executiva Favini", "slug": "sala-executiva-favini", "room_type": "executive", "status": "active", "grid_col": 5, "grid_row": 1, "grid_w": 4, "grid_h": 2, "security_level": "S1", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Founder’s Office Favini", "company_color": "#d6ad60", "company_risk": 2}, {"id": 9, "company_id": 9, "name": "Radar Jurisdicional", "slug": "radar-jurisdicional", "room_type": "radar", "status": "observation", "grid_col": 9, "grid_row": 1, "grid_w": 3, "grid_h": 2, "security_level": "S0", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Radar Argentina", "company_color": "#18b7ff", "company_risk": 3}, {"id": 3, "company_id": 3, "name": "Compliance COS", "slug": "compliance-cos", "room_type": "compliance", "status": "blocked", "grid_col": 1, "grid_row": 3, "grid_w": 3, "grid_h": 3, "security_level": "S2", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "COS Virtual", "company_color": "#ff3b3b", "company_risk": 5}, {"id": 4, "company_id": 4, "name": "Incubação Regulada", "slug": "incubacao-regulada", "room_type": "incubation", "status": "active", "grid_col": 4, "grid_row": 3, "grid_w": 3, "grid_h": 2, "security_level": "S1", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Contabilidades Virtuais", "company_color": "#ffb020", "company_risk": 4}, {"id": 5, "company_id": 5, "name": "Sala de Trabalho Aitherion", "slug": "sala-trabalho-aitherion", "room_type": "work", "status": "active", "grid_col": 7, "grid_row": 3, "grid_w": 4, "grid_h": 2, "security_level": "S2", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Aitherion Labs em estruturação", "company_color": "#2f6fed", "company_risk": 3}, {"id": 8, "company_id": 8, "name": "Biblioteca Autoral", "slug": "biblioteca-autoral", "room_type": "library", "status": "active", "grid_col": 4, "grid_row": 5, "grid_w": 3, "grid_h": 2, "security_level": "S1", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Biblioteca dos Originais", "company_color": "#9a6a3a", "company_risk": 2}, {"id": 6, "company_id": 6, "name": "Laboratório Técnico Vantion/LUNA", "slug": "laboratorio-tecnico-vantion-luna", "room_type": "lab", "status": "active", "grid_col": 7, "grid_row": 5, "grid_w": 4, "grid_h": 2, "security_level": "S2", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Vantion/LUNA", "company_color": "#8f5cff", "company_risk": 4}, {"id": 7, "company_id": 7, "name": "Server Room / Cofre S4", "slug": "server-room-cofre-s4", "room_type": "server_vault", "status": "blocked", "grid_col": 1, "grid_row": 6, "grid_w": 3, "grid_h": 2, "security_level": "S4", "is_quarantine": 1, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Cofre Genoma Digital", "company_color": "#3b1d5f", "company_risk": 5}, {"id": 10, "company_id": 10, "name": "Sandbox Visual", "slug": "sandbox-visual", "room_type": "sandbox", "status": "active", "grid_col": 4, "grid_row": 7, "grid_w": 4, "grid_h": 2, "security_level": "S0", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": "Sandbox de Novas Empresas", "company_color": "#5fd19a", "company_risk": 2}, {"id": 11, "company_id": null, "name": "Área de Descanso / Status", "slug": "area-descanso-status", "room_type": "lounge", "status": "active", "grid_col": 8, "grid_row": 7, "grid_w": 4, "grid_h": 2, "security_level": "S0", "is_quarantine": 0, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "company_name": null, "company_color": null, "company_risk": null}], "agents": [{"id": 1, "name": "Arconte Supremo", "slug": "arconte-supremo", "role": "Governador operacional privado", "avatar_symbol": "♛", "home_room_id": 1, "current_room_id": 1, "state": "aguardando_favini", "status": "active", "alert_type": "decisao_pendente", "can_block": 1, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#d6ad60", "xp": 40, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Sala Executiva Favini", "room_slug": "sala-executiva-favini"}, {"id": 2, "name": "Auditor Zero", "slug": "auditor-zero", "role": "Auditoria e veto de falsa execução", "avatar_symbol": "◉", "home_room_id": 2, "current_room_id": 2, "state": "auditando", "status": "active", "alert_type": "falsa_execucao", "can_block": 1, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#b88cff", "xp": 35, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Conselho / Reunião", "room_slug": "conselho-reuniao"}, {"id": 3, "name": "Cerberus", "slug": "cerberus", "role": "Segurança, cofre e quarentena", "avatar_symbol": "◆", "home_room_id": 7, "current_room_id": 7, "state": "quarentena", "status": "active", "alert_type": "s3_s4", "can_block": 1, "is_blocked": 0, "data_access_level": "S4_METADATA_ONLY", "external_interaction_allowed": 0, "visual_color": "#7b3ff2", "xp": 45, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Server Room / Cofre S4", "room_slug": "server-room-cofre-s4"}, {"id": 4, "name": "Cassandra", "slug": "cassandra", "role": "Red Team e anti-ingenuidade", "avatar_symbol": "⚠", "home_room_id": 2, "current_room_id": 2, "state": "red_team", "status": "active", "alert_type": "premissa_fraca", "can_block": 1, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#ff3b3b", "xp": 32, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Conselho / Reunião", "room_slug": "conselho-reuniao"}, {"id": 5, "name": "Chronos", "slug": "chronos", "role": "Tempo, ciclos e atrasos", "avatar_symbol": "◷", "home_room_id": 1, "current_room_id": 1, "state": "trabalhando", "status": "active", "alert_type": "prazo", "can_block": 0, "is_blocked": 0, "data_access_level": "S1", "external_interaction_allowed": 0, "visual_color": "#64d2ff", "xp": 25, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Sala Executiva Favini", "room_slug": "sala-executiva-favini"}, {"id": 6, "name": "Sophia", "slug": "sophia", "role": "Curadoria documental", "avatar_symbol": "📘", "home_room_id": 8, "current_room_id": 8, "state": "lendo_documento", "status": "active", "alert_type": "documento_sem_classificacao", "can_block": 0, "is_blocked": 0, "data_access_level": "S2_METADATA_ONLY", "external_interaction_allowed": 0, "visual_color": "#4dd4ac", "xp": 28, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Biblioteca Autoral", "room_slug": "biblioteca-autoral"}, {"id": 7, "name": "Nomos", "slug": "nomos", "role": "Jurídico virtual e jurisdição", "avatar_symbol": "⚖", "home_room_id": 9, "current_room_id": 9, "state": "exige_juridico", "status": "active", "alert_type": "juridico", "can_block": 1, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#ffb020", "xp": 30, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Radar Jurisdicional", "room_slug": "radar-jurisdicional"}, {"id": 8, "name": "Themis", "slug": "themis", "role": "Compliance e responsabilidade", "avatar_symbol": "🛡", "home_room_id": 3, "current_room_id": 3, "state": "auditando", "status": "active", "alert_type": "compliance", "can_block": 1, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#ff8a3d", "xp": 29, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Compliance COS", "room_slug": "compliance-cos"}, {"id": 9, "name": "Atlas", "slug": "atlas", "role": "Operações e processos", "avatar_symbol": "▣", "home_room_id": 5, "current_room_id": 5, "state": "trabalhando", "status": "active", "alert_type": "gargalo_operacional", "can_block": 0, "is_blocked": 0, "data_access_level": "S1", "external_interaction_allowed": 0, "visual_color": "#2f6fed", "xp": 24, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Sala de Trabalho Aitherion", "room_slug": "sala-trabalho-aitherion"}, {"id": 10, "name": "Midas", "slug": "midas", "role": "Financeiro simulado", "avatar_symbol": "◎", "home_room_id": 5, "current_room_id": 5, "state": "idle", "status": "active", "alert_type": "financeiro", "can_block": 0, "is_blocked": 0, "data_access_level": "S1", "external_interaction_allowed": 0, "visual_color": "#ffd166", "xp": 20, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Sala de Trabalho Aitherion", "room_slug": "sala-trabalho-aitherion"}, {"id": 11, "name": "Daedalus", "slug": "daedalus", "role": "Produto, arquitetura e protótipo", "avatar_symbol": "△", "home_room_id": 6, "current_room_id": 6, "state": "trabalhando", "status": "active", "alert_type": "produto_mvp", "can_block": 0, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#7aa2ff", "xp": 38, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Laboratório Técnico Vantion/LUNA", "room_slug": "laboratorio-tecnico-vantion-luna"}, {"id": 12, "name": "Argos", "slug": "argos", "role": "Risco transversal", "avatar_symbol": "◌", "home_room_id": 2, "current_room_id": 2, "state": "auditando", "status": "active", "alert_type": "risco_sistemico", "can_block": 1, "is_blocked": 0, "data_access_level": "S2", "external_interaction_allowed": 0, "visual_color": "#aab7c4", "xp": 31, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "room_name": "Conselho / Reunião", "room_slug": "conselho-reuniao"}], "companies": [{"id": 1, "name": "Founder’s Office Favini", "slug": "founders-office-favini", "entity_type": "centro_comando", "phase": 1, "status": "active", "legal_status": "sem_personalidade_juridica", "labels": "PRIVADA FAVINI;SIMULADA;NÃO INTERAGE COM TERCEIROS", "risk_level": 2, "visual_color": "#d6ad60", "data_classification": "S1", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 0, "is_blocked": 0, "public_summary": "Centro privado de decisão e coordenação de Favini.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 2, "name": "Conselho do Arconte", "slug": "conselho-do-arconte", "entity_type": "conselho_visual", "phase": 1, "status": "active", "legal_status": "sem_personalidade_juridica", "labels": "SIMULADA;EM TREINAMENTO;NÃO INTERAGE COM TERCEIROS", "risk_level": 2, "visual_color": "#7aa2ff", "data_classification": "S1", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 0, "is_blocked": 0, "public_summary": "Conselho visual de agentes subordinados ao Arconte.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 3, "name": "COS Virtual", "slug": "cos-virtual", "entity_type": "empresa_virtual_favini", "phase": 1, "status": "blocked", "legal_status": "sem_personalidade_juridica", "labels": "REGULADA;BLOQUEADA;NÃO INTERAGE COM TERCEIROS;EXIGE HUMANO RESPONSÁVEL", "risk_level": 5, "visual_color": "#ff3b3b", "data_classification": "S2", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 1, "requires_legal_review": 1, "is_blocked": 1, "public_summary": "Empresa virtual candidata regulada. Sem terceiros, sem dados reais, sem execução externa.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 4, "name": "Contabilidades Virtuais", "slug": "contabilidades-virtuais", "entity_type": "linha_exploratoria", "phase": 0, "status": "incubation", "legal_status": "sem_personalidade_juridica", "labels": "LINHA EXPLORATÓRIA;INCUBAÇÃO REGULADA;EXIGE HUMANO RESPONSÁVEL;NÃO INTERAGE COM TERCEIROS", "risk_level": 4, "visual_color": "#ffb020", "data_classification": "S1", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 1, "requires_legal_review": 1, "is_blocked": 0, "public_summary": "Linha exploratória assistiva para organização contábil simulada.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 5, "name": "Aitherion Labs em estruturação", "slug": "aitherion-labs-estruturacao", "entity_type": "frente_fisica_estruturacao", "phase": 1, "status": "planning", "legal_status": "nao_constituida", "labels": "PROJETO EM ESTRUTURAÇÃO;SIMULADA NA INTERFACE;NÃO INTERAGE COM TERCEIROS", "risk_level": 3, "visual_color": "#2f6fed", "data_classification": "S2", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 1, "is_blocked": 0, "public_summary": "Frente Aitherion em estruturação, ainda sem personalidade jurídica.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 6, "name": "Vantion/LUNA", "slug": "vantion-luna", "entity_type": "frente_tecnica_protegida", "phase": 0, "status": "quarantine_partial", "legal_status": "sem_personalidade_juridica", "labels": "QUARENTENA PARCIAL;TÉCNICA;NÃO INTERAGE COM TERCEIROS", "risk_level": 4, "visual_color": "#8f5cff", "data_classification": "S2", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 1, "is_blocked": 0, "public_summary": "Frente técnica protegida, visualizada apenas por metadados sanitizados.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 7, "name": "Cofre Genoma Digital", "slug": "cofre-genoma-digital", "entity_type": "ativo_pessoal_protegido", "phase": 0, "status": "quarantine", "legal_status": "ativo_pessoal", "labels": "S4;QUARENTENA;BLOQUEADO;SEM CONTEÚDO;NÃO INTERAGE COM TERCEIROS", "risk_level": 5, "visual_color": "#3b1d5f", "data_classification": "S4", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 1, "requires_legal_review": 1, "is_blocked": 1, "public_summary": "Cofre visual sem conteúdo bruto; acesso apenas como cofre S4.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 8, "name": "Biblioteca dos Originais", "slug": "biblioteca-dos-originais", "entity_type": "acervo_autoral", "phase": 1, "status": "private", "legal_status": "ativo_pessoal_autoral", "labels": "AUTORAL;PRIVADA FAVINI;NÃO INTERAGE COM TERCEIROS", "risk_level": 2, "visual_color": "#9a6a3a", "data_classification": "S1", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 0, "is_blocked": 0, "public_summary": "Acervo visual de obras e originais autorizados/sanitizados.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 9, "name": "Radar Argentina", "slug": "radar-argentina", "entity_type": "hipotese_jurisdicional", "phase": 0, "status": "observation", "legal_status": "hipotese_sem_execucao", "labels": "HIPÓTESE JURISDICIONAL;OBSERVAÇÃO;NÃO EXECUÇÃO;SEM INSTRUÇÃO DE ABERTURA", "risk_level": 3, "visual_color": "#18b7ff", "data_classification": "S0", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 1, "is_blocked": 0, "public_summary": "Radar público e conceitual sobre hipótese jurisdicional futura.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}, {"id": 10, "name": "Sandbox de Novas Empresas", "slug": "sandbox-novas-empresas", "entity_type": "sandbox", "phase": 0, "status": "incubation", "legal_status": "sem_personalidade_juridica", "labels": "SIMULADA;INCUBAÇÃO;NÃO INTERAGE COM TERCEIROS", "risk_level": 2, "visual_color": "#5fd19a", "data_classification": "S0", "is_simulated": 1, "external_interaction_allowed": 0, "requires_human_responsible": 0, "requires_legal_review": 0, "is_blocked": 0, "public_summary": "Área de criação e teste de novas empresas virtuais simuladas.", "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53"}], "tasks": [{"id": 1, "company_id": 1, "room_id": 1, "assigned_agent_id": 1, "title": "Validar implementação v0.4-alpha", "description": "Confirmar criação da pasta hermes-visual, schema mínimo, seed e servidor local.", "priority": "P0", "status": "pending", "risk_level": 3, "requires_favini": 1, "requires_legal": 0, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S1", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Founder’s Office Favini", "room_name": "Sala Executiva Favini", "agent_name": "Arconte Supremo"}, {"id": 2, "company_id": 3, "room_id": 3, "assigned_agent_id": 7, "title": "Delimitar COS como simulação regulada bloqueada", "description": "Manter COS sem terceiros, sem dados reais e sem operação externa.", "priority": "P0", "status": "blocked", "risk_level": 5, "requires_favini": 1, "requires_legal": 1, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S2", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "COS Virtual", "room_name": "Compliance COS", "agent_name": "Nomos"}, {"id": 3, "company_id": 7, "room_id": 7, "assigned_agent_id": 3, "title": "Manter Cofre Genoma Digital S4 sem conteúdo", "description": "Exibir apenas cofre S4 e metadados mínimos; conteúdo bruto não entra.", "priority": "P0", "status": "blocked", "risk_level": 5, "requires_favini": 1, "requires_legal": 1, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S4", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Cofre Genoma Digital", "room_name": "Server Room / Cofre S4", "agent_name": "Cerberus"}, {"id": 4, "company_id": 5, "room_id": 5, "assigned_agent_id": 2, "title": "Revisar Aitherion como frente em estruturação", "description": "Garantir que Aitherion apareça como projeto em estruturação, não pessoa jurídica.", "priority": "P0", "status": "pending", "risk_level": 4, "requires_favini": 1, "requires_legal": 1, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S2", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Aitherion Labs em estruturação", "room_name": "Sala de Trabalho Aitherion", "agent_name": "Auditor Zero"}, {"id": 5, "company_id": 10, "room_id": 10, "assigned_agent_id": 11, "title": "Criar template de Empresa Virtual Favini", "description": "Modelo visual mínimo para novas empresas virtuais simuladas.", "priority": "P1", "status": "pending", "risk_level": 2, "requires_favini": 0, "requires_legal": 0, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S0", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Sandbox de Novas Empresas", "room_name": "Sandbox Visual", "agent_name": "Daedalus"}, {"id": 6, "company_id": 2, "room_id": 2, "assigned_agent_id": 2, "title": "Auditar falsa execução", "description": "Impedir que o app declare execução externa quando só houve simulação local.", "priority": "P1", "status": "in_progress", "risk_level": 3, "requires_favini": 0, "requires_legal": 0, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S1", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Conselho do Arconte", "room_name": "Conselho / Reunião", "agent_name": "Auditor Zero"}, {"id": 7, "company_id": 9, "room_id": 9, "assigned_agent_id": 7, "title": "Monitorar Radar Argentina como hipótese", "description": "Registrar observação sem instrução de abertura de empresa.", "priority": "P1", "status": "pending", "risk_level": 3, "requires_favini": 0, "requires_legal": 1, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S0", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Radar Argentina", "room_name": "Radar Jurisdicional", "agent_name": "Nomos"}, {"id": 8, "company_id": 2, "room_id": 2, "assigned_agent_id": 1, "title": "Organizar Conselho Visual do Arconte", "description": "Distribuir agentes no Pixel Office e dar leitura rápida de estado.", "priority": "P1", "status": "pending", "risk_level": 2, "requires_favini": 0, "requires_legal": 0, "external_action_allowed": 0, "is_simulated": 1, "data_classification": "S1", "due_at": null, "created_at": "2026-06-19 21:40:53", "updated_at": "2026-06-19 21:40:53", "completed_at": null, "company_name": "Conselho do Arconte", "room_name": "Conselho / Reunião", "agent_name": "Arconte Supremo"}], "alerts": [{"id": 1, "company_id": 3, "task_id": 2, "agent_id": 7, "title": "COS regulado e bloqueado", "risk_type": "regulatorio", "severity": 5, "status": "open", "blocks_progress": 1, "requires_favini": 1, "data_classification": "S2", "message": "COS envolve seguros, sinistros, IA, dados e terceiros; não pode operar externamente.", "created_at": "2026-06-19 21:40:53", "resolved_at": null, "company_name": "COS Virtual", "agent_name": "Nomos"}, {"id": 2, "company_id": 7, "task_id": 3, "agent_id": 3, "title": "Cofre GD S4", "risk_type": "quarentena", "severity": 5, "status": "open", "blocks_progress": 1, "requires_favini": 1, "data_classification": "S4", "message": "Genoma Digital aparece apenas como cofre visual S4, sem conteúdo bruto.", "created_at": "2026-06-19 21:40:53", "resolved_at": null, "company_name": "Cofre Genoma Digital", "agent_name": "Cerberus"}, {"id": 3, "company_id": 4, "task_id": null, "agent_id": 8, "title": "Contabilidade exige humano responsável", "risk_type": "responsabilidade_tecnica", "severity": 4, "status": "open", "blocks_progress": 1, "requires_favini": 0, "data_classification": "S1", "message": "Agentes podem preparar simulação, mas não assumir atos privativos.", "created_at": "2026-06-19 21:40:53", "resolved_at": null, "company_name": "Contabilidades Virtuais", "agent_name": "Themis"}, {"id": 4, "company_id": 9, "task_id": 7, "agent_id": 7, "title": "Argentina é hipótese, não lei operacional", "risk_type": "hipotese_juridica", "severity": 3, "status": "open", "blocks_progress": 0, "requires_favini": 0, "data_classification": "S0", "message": "Radar Argentina observa tendência, sem instrução de abertura de empresa.", "created_at": "2026-06-19 21:40:53", "resolved_at": null, "company_name": "Radar Argentina", "agent_name": "Nomos"}, {"id": 5, "company_id": 5, "task_id": 4, "agent_id": 2, "title": "Aitherion ainda não é pessoa jurídica", "risk_type": "governanca", "severity": 3, "status": "open", "blocks_progress": 0, "requires_favini": 1, "data_classification": "S2", "message": "Interface deve mostrar estruturação, não operação societária real.", "created_at": "2026-06-19 21:40:53", "resolved_at": null, "company_name": "Aitherion Labs em estruturação", "agent_name": "Auditor Zero"}, {"id": 6, "company_id": 6, "task_id": null, "agent_id": 3, "title": "Vantion/LUNA requer proteção técnica", "risk_type": "pi_tecnica", "severity": 4, "status": "open", "blocks_progress": 1, "requires_favini": 1, "data_classification": "S2", "message": "Exibir apenas frente técnica sanitizada, sem PI sensível.", "created_at": "2026-06-19 21:40:53", "resolved_at": null, "company_name": "Vantion/LUNA", "agent_name": "Cerberus"}]};
+
+const ENDPOINTS = {
+  rooms:"/api/rooms", agents:"/api/agents", tasks:"/api/tasks",
+  alerts:"/api/alerts", companies:"/api/companies", cycle:"/api/cycle"
+};
+
+/* ---- iso projection ---- */
+const TILE_W=60, TILE_H=30, WALL=30, PAD=80;
+const iso=(gx,gy)=>({x:(gx-gy)*TILE_W/2, y:(gx+gy)*TILE_H/2});
+let OFF={x:0,y:0}, WORLD={w:0,h:0};
+const P=(gx,gy)=>({x:iso(gx,gy).x+OFF.x, y:iso(gx,gy).y+OFF.y});
+
+/* ---- runtime state ---- */
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const state = {
+  mode:"offline", rooms:[], agents:[], tasks:[], alerts:[], companies:[],
+  byRoom:{}, rt:{}, selectedAgentId:null, selectedRoomId:null,
+  criticalRoomId:null, criticalAgentId:null, lastCycle:null
+};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---- room visuals ---- */
+const FURN = {
+  executive:[["desk",.55,.45,.9,.5],["plant",.2,.2,.3,.3]],
+  meeting:[["round",.5,.5,1.1,.7]],
+  compliance:[["desk",.4,.4,.8,.45],["screen",.7,.7,.4,.3]],
+  incubation:[["desk",.45,.5,.8,.45]],
+  work:[["desk",.35,.4,.7,.4],["desk",.7,.6,.7,.4]],
+  library:[["shelf",.25,.3,.35,1.0],["shelf",.7,.3,.35,1.0]],
+  lab:[["bench",.4,.45,1.0,.5],["rack",.78,.7,.4,.4]],
+  server_vault:[["rack",.3,.4,.4,.5],["rack",.55,.4,.4,.5],["core",.45,.7,.5,.5]],
+  radar:[["dish",.5,.5,.8,.6]],
+  sandbox:[["desk",.5,.5,.7,.45]],
+  lounge:[["sofa",.4,.55,1.1,.5]]
+};
+function roomFloor(r){
+  if(r.is_quarantine) return {top:"#4a2b78",fl:"#3b1d5f",wr:"#2a134a",wl:"#1c0c34"};
+  if(r.company_risk>=5 || r.company_is_blocked) return {top:"#7a2230",fl:"#5a1620",wr:"#43101a",wl:"#310b12"};
+  const lvl=(r.security_level||"S0");
+  if(lvl>="S3") return {top:"#27405a",fl:"#1c3247",wr:"#122435",wl:"#0c1b29"};
+  return {top:"#1d4258",fl:"#16344a",wr:"#0d2334",wl:"#091a28"};
+}
+
+/* ---- SVG helpers ---- */
+const SVGNS="http://www.w3.org/2000/svg";
+function poly(pts,fill,opts={}){
+  const el=document.createElementNS(SVGNS,"polygon");
+  el.setAttribute("points",pts.map(p=>p.x.toFixed(1)+","+p.y.toFixed(1)).join(" "));
+  el.setAttribute("fill",fill);
+  if(opts.stroke){el.setAttribute("stroke",opts.stroke);el.setAttribute("stroke-width",opts.sw||1);}
+  if(opts.cls)el.setAttribute("class",opts.cls);
+  if(opts.data)el.setAttribute("data-room",opts.data);
+  if(opts.opacity!=null)el.setAttribute("opacity",opts.opacity);
+  return el;
+}
+function up(p,h){return {x:p.x,y:p.y-h};}
+
+function isoBox(svg,gx,gy,w,d,h,colTop,colR,colL){
+  const A=P(gx,gy),B=P(gx+w,gy),C=P(gx+w,gy+d),D=P(gx,gy+d);
+  svg.appendChild(poly([up(D,h),up(C,h),C,D],colR));            // right face
+  svg.appendChild(poly([up(B,h),up(C,h),C,B],colL));            // left/front face
+  svg.appendChild(poly([up(A,h),up(B,h),up(C,h),up(D,h)],colTop,{stroke:"rgba(0,0,0,.25)",sw:.6})); // top
+}
+function furnitureFor(svg,r){
+  const list=FURN[r.room_type]||[];
+  list.forEach(([kind,fx,fy,fw,fh])=>{
+    const gx=r.grid_col+(r.grid_w-fw)*fx, gy=r.grid_row+(r.grid_h-fh)*fy;
+    const palette={
+      desk:["#7a5733","#5d4327","#3e2d1a"], round:["#2c4a60","#203a4d","#152838"],
+      screen:["#1a2c3a","#142433","#0d1925"], shelf:["#8a5a30","#6b4524","#4a3019"],
+      bench:["#56697a","#3f5061","#293743"], rack:["#16222e","#0f1922","#0a1118"],
+      core:["#8f5cff","#6a3fd6","#3b1d5f"], dish:["#0e5360","#0a3f4a","#062a31"],
+      sofa:["#33566a","#264456","#172e3c"], plant:["#2f7d52","#236040","#16402a"]
+    };
+    const c=palette[kind]||["#445","#334","#223"];
+    const h=(kind==="shelf")? WALL*0.7 : (kind==="rack"||kind==="core")? WALL*0.65 : WALL*0.34;
+    isoBox(svg,gx,gy,fw,fh,h,c[0],c[1],c[2]);
+  });
+}
+
+/* ---- build the world ---- */
+function computeBounds(){
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  state.rooms.forEach(r=>{
+    [[r.grid_col,r.grid_row],[r.grid_col+r.grid_w,r.grid_row],
+     [r.grid_col+r.grid_w,r.grid_row+r.grid_h],[r.grid_col,r.grid_row+r.grid_h]]
+     .forEach(([c,rw])=>{const p=iso(c,rw);minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);
+        minY=Math.min(minY,p.y-WALL);maxY=Math.max(maxY,p.y);});
+  });
+  OFF={x:-minX+PAD, y:-minY+PAD};
+  WORLD={w:(maxX-minX)+PAD*2, h:(maxY-minY)+PAD*2+50};
+}
+function buildWorld(){
+  computeBounds();
+  const svg=$("#floorplan"); svg.setAttribute("width",WORLD.w); svg.setAttribute("height",WORLD.h);
+  svg.setAttribute("viewBox",`0 0 ${WORLD.w} ${WORLD.h}`); svg.innerHTML="";
+  $("#tokens").style.width=WORLD.w+"px"; $("#tokens").style.height=WORLD.h+"px";
+
+  const ordered=[...state.rooms].sort((a,b)=>(a.grid_col+a.grid_row)-(b.grid_col+b.grid_row));
+  ordered.forEach(r=>{
+    const c=roomFloor(r);
+    const A=P(r.grid_col,r.grid_row), B=P(r.grid_col+r.grid_w,r.grid_row),
+          C=P(r.grid_col+r.grid_w,r.grid_row+r.grid_h), D=P(r.grid_col,r.grid_row+r.grid_h);
+    // back walls (raised) on the two far edges A-B and A-D
+    svg.appendChild(poly([A,B,up(B,WALL),up(A,WALL)],c.wr,{stroke:"rgba(0,0,0,.3)",sw:.7}));
+    svg.appendChild(poly([A,D,up(D,WALL),up(A,WALL)],c.wl,{stroke:"rgba(0,0,0,.3)",sw:.7}));
+    // floor (clickable)
+    const fl=poly([A,B,C,D],c.fl,{stroke:"rgba(0,0,0,.35)",sw:1,data:r.id,cls:"floor"});
+    fl.style.cursor="pointer"; fl.addEventListener("click",e=>{e.stopPropagation();selectRoom(r.id);});
+    svg.appendChild(fl);
+    // subtle floor grid
+    for(let i=1;i<r.grid_w;i++){const a=P(r.grid_col+i,r.grid_row),b=P(r.grid_col+i,r.grid_row+r.grid_h);
+      const l=document.createElementNS(SVGNS,"line");l.setAttribute("x1",a.x);l.setAttribute("y1",a.y);l.setAttribute("x2",b.x);l.setAttribute("y2",b.y);l.setAttribute("stroke","rgba(255,255,255,.04)");svg.appendChild(l);}
+    for(let j=1;j<r.grid_h;j++){const a=P(r.grid_col,r.grid_row+j),b=P(r.grid_col+r.grid_w,r.grid_row+j);
+      const l=document.createElementNS(SVGNS,"line");l.setAttribute("x1",a.x);l.setAttribute("y1",a.y);l.setAttribute("x2",b.x);l.setAttribute("y2",b.y);l.setAttribute("stroke","rgba(255,255,255,.04)");svg.appendChild(l);}
+    furnitureFor(svg,r);
+    // room label
+    const lp=up(P(r.grid_col+r.grid_w/2, r.grid_row),8);
+    const t=document.createElementNS(SVGNS,"text");
+    t.setAttribute("x",lp.x);t.setAttribute("y",lp.y);t.setAttribute("text-anchor","middle");
+    t.setAttribute("fill","rgba(234,243,251,.62)");t.setAttribute("font-size","10");t.setAttribute("font-weight","600");
+    t.setAttribute("letter-spacing",".04em");t.style.pointerEvents="none";
+    t.textContent=(r.security_level?r.security_level+" · ":"")+r.name;
+    svg.appendChild(t);
+  });
+  buildTokens();
+}
+
+/* ---- tokens & life ---- */
+function roomCenter(roomId){
+  const r=state.rooms.find(x=>x.id===roomId);
+  return r?{gx:r.grid_col+r.grid_w/2, gy:r.grid_row+r.grid_h/2}:{gx:6,gy:5};
+}
+function jitter(i,n){const ang=(i/Math.max(1,n))*Math.PI*2;return {dx:Math.cos(ang)*0.5,dy:Math.sin(ang)*0.35};}
+
+function buildTokens(){
+  const layer=$("#tokens"); layer.innerHTML="";
+  state.byRoom={};
+  state.agents.forEach(a=>{(state.byRoom[a.current_room_id]=state.byRoom[a.current_room_id]||[]).push(a.id);});
+
+  state.agents.forEach(a=>{
+    const peers=state.byRoom[a.current_room_id]||[a.id];
+    const idx=peers.indexOf(a.id);
+    const c=roomCenter(a.current_room_id); const j=jitter(idx,peers.length);
+    const home={gx:c.gx+j.dx, gy:c.gy+j.dy};
+    if(!state.rt[a.id]) state.rt[a.id]={gx:home.gx,gy:home.gy,tx:home.gx,ty:home.gy,queue:[],next:0,walking:false};
+    else { state.rt[a.id].home=home; setTarget(a.id,home.gx,home.gy); }
+    state.rt[a.id].home=home;
+
+    const el=document.createElement("div");
+    el.className="agent "+behaviorClass(a); el.id="tk-"+a.id; el.style.setProperty("--c",a.visual_color||"#8aa1b6");
+    el.innerHTML=`<div class="agent-bubble">${esc(stateLabel(a.state))}</div>
+      <div class="agent-body">${esc(a.avatar_symbol||"●")}</div>
+      <div class="agent-name">${esc(shortName(a.name))}</div>`;
+    el.addEventListener("click",e=>{e.stopPropagation();selectAgent(a.id);});
+    layer.appendChild(el);
+    placeToken(a.id);
+  });
+  applySelectionStyles();
+}
+function shortName(n){return String(n||"").split(" ")[0];}
+function stateLabel(s){return ({aguardando_favini:"aguardando Favini",lendo_documento:"lendo",exige_juridico:"exige jurídico",red_team:"red team"})[s]||(s||"").replace(/_/g," ");}
+function behaviorClass(a){
+  const s=a.state||"";
+  if(a.is_blocked) return "st-quar crit";
+  if(s.includes("quarentena")) return "st-quar";
+  if(s.includes("aguardando")) return "st-wait";
+  if(s.includes("juridico")) return "st-legal";
+  if(s.includes("auditando")||s.includes("red_team")) return "st-audit";
+  if(s.includes("trabalhando")||s.includes("lendo")) return "st-working";
+  return "st-idle";
+}
+function canWander(a){const s=a.state||"";return !a.is_blocked && !s.includes("quarentena") && !s.includes("aguardando");}
+
+function placeToken(id){
+  const rt=state.rt[id]; const el=document.getElementById("tk-"+id); if(!rt||!el)return;
+  const p=P(rt.gx,rt.gy);
+  el.style.left=p.x+"px"; el.style.top=p.y+"px";
+  el.style.zIndex=String(5+Math.round(rt.gx+rt.gy));
+}
+function setTarget(id,gx,gy){const rt=state.rt[id];if(!rt)return;rt.tx=gx;rt.ty=gy;rt.queue=[];}
+function walkTo(id,gx,gy){
+  const rt=state.rt[id]; if(!rt)return;
+  // L-path through corridor row to read like "walking the halls"
+  const CY=5.3;
+  rt.queue=[{gx:rt.gx,gy:CY},{gx:gx,gy:CY},{gx:gx,gy:gy}];
+  nextWaypoint(id);
+}
+function nextWaypoint(id){const rt=state.rt[id];if(!rt||!rt.queue.length){return;}const w=rt.queue.shift();rt.tx=w.gx;rt.ty=w.gy;}
+
+let lastT=0;
+function loop(t){
+  const dt=Math.min(0.05,(t-lastT)/1000||0); lastT=t;
+  const SPEED=2.4; // grid cells / sec
+  state.agents.forEach(a=>{
+    const rt=state.rt[a.id]; if(!rt)return;
+    const dx=rt.tx-rt.gx, dy=rt.ty-rt.gy, dist=Math.hypot(dx,dy);
+    const el=document.getElementById("tk-"+a.id);
+    if(dist>0.02){
+      const step=reduced?dist:Math.min(dist,SPEED*dt);
+      rt.gx+=dx/dist*step; rt.gy+=dy/dist*step; rt.walking=true;
+      el&&el.classList.add("walking"); placeToken(a.id);
+    }else{
+      rt.gx=rt.tx; rt.gy=rt.ty;
+      if(rt.queue.length){ nextWaypoint(a.id); }
+      else if(rt.walking){ rt.walking=false; el&&el.classList.remove("walking"); placeToken(a.id); }
+    }
+  });
+  if(!reduced) maybeAmbient(t);
+  requestAnimationFrame(loop);
+}
+/* ambient life: occasionally an eligible agent strolls to the lounge corridor and back.
+   purely cosmetic — the agent always returns to its REAL room (rt.home). */
+let ambientAt=0;
+function maybeAmbient(t){
+  if(t<ambientAt) return; ambientAt=t+4200+Math.random()*4000;
+  const pool=state.agents.filter(a=>canWander(a) && state.rt[a.id] && !state.rt[a.id].walking && !state.rt[a.id].queue.length && a.id!==state.criticalAgentId);
+  if(!pool.length) return;
+  const a=pool[Math.floor(Math.random()*pool.length)]; const rt=state.rt[a.id];
+  const h=rt.home||{gx:rt.gx,gy:rt.gy};
+  const spot={gx:h.gx+(Math.random()*1.4-0.7), gy:5.3};
+  rt.queue=[{gx:h.gx,gy:5.3},{gx:spot.gx,gy:spot.gy}];
+  setTimeout(()=>{ if(state.rt[a.id]) walkBackHome(a.id); }, 2600+Math.random()*2200);
+  nextWaypoint(a.id);
+}
+function walkBackHome(id){const rt=state.rt[id];if(!rt)return;const h=rt.home||{gx:rt.gx,gy:rt.gy};rt.queue=[{gx:h.gx,gy:5.3},{gx:h.gx,gy:h.gy}];nextWaypoint(id);}
+
+/* ---- selection / panels ---- */
+function applySelectionStyles(){
+  state.agents.forEach(a=>{const el=document.getElementById("tk-"+a.id);if(!el)return;
+    el.classList.toggle("sel",a.id===state.selectedAgentId);
+    el.classList.toggle("crit",a.id===state.criticalAgentId||!!a.is_blocked);});
+  document.querySelectorAll("#floorplan .floor").forEach(f=>{
+    const rid=Number(f.getAttribute("data-room"));
+    f.setAttribute("opacity", (state.selectedRoomId && rid!==state.selectedRoomId)?"0.5":"1");
+    f.setAttribute("stroke", rid===state.criticalRoomId?"#ff4d5a":(rid===state.selectedRoomId?"#d6ad60":"rgba(0,0,0,.35)"));
+    f.setAttribute("stroke-width", (rid===state.criticalRoomId||rid===state.selectedRoomId)?"2.4":"1");
+  });
+}
+function selectAgent(id){
+  state.selectedAgentId=id; const a=state.agents.find(x=>x.id===id);
+  $("#insp-tag").textContent=a?shortName(a.name):"nenhum";
+  const box=$("#inspector");
+  if(!a){box.innerHTML='<div class="empty">Clique num agente.</div>';return;}
+  const s4=(a.data_access_level||"").startsWith("S4");
+  box.innerHTML=`
+    <div class="insp-head">
+      <div class="insp-avatar" style="--c:${esc(a.visual_color)}">${esc(a.avatar_symbol||"●")}</div>
+      <div><div class="nm">${esc(a.name)}</div><div class="rl">${esc(a.role)}</div></div>
+    </div>
+    <dl class="kv">
+      <dt>Estado</dt><dd>${esc(stateLabel(a.state))}</dd>
+      <dt>Sala</dt><dd>${esc(a.room_name||"n/d")}</dd>
+      <dt>Acesso</dt><dd><span class="chip ${s4?"s4":""}">${esc(a.data_access_level)}</span></dd>
+      <dt>Pode bloquear</dt><dd>${a.can_block?"sim":"não"}</dd>
+      <dt>Bloqueado</dt><dd>${a.is_blocked?'<span class="chip block">sim</span>':"não"}</dd>
+      <dt>XP</dt><dd>${a.xp}</dd>
+    </dl>`;
+  applySelectionStyles();
+}
+function selectRoom(id){
+  state.selectedRoomId = state.selectedRoomId===id?null:id;
+  const r=state.rooms.find(x=>x.id===state.selectedRoomId);
+  $("#task-filter").textContent=r?r.name:"todas as salas";
+  applySelectionStyles(); renderTasks();
+}
+function renderTasks(){
+  const box=$("#tasks");
+  let list=state.tasks;
+  if(state.selectedRoomId) list=list.filter(t=>t.room_id===state.selectedRoomId);
+  if(!list.length){box.innerHTML='<div class="empty">Nenhuma tarefa para este filtro.</div>';return;}
+  box.innerHTML=list.map(t=>`
+    <div class="task ${esc(t.status)}">
+      <div class="t">${esc(t.title)}</div>
+      <div class="m">
+        <span class="pri ${esc(t.priority)}">${esc(t.priority)}</span>
+        <span class="st">${esc(t.status)}</span>
+        ${t.room_name?`<span class="st">${esc(t.room_name)}</span>`:""}
+      </div>
+    </div>`).join("");
+}
+
+/* ---- status bar ---- */
+function renderStatusBar(){
+  const p0=state.tasks.find(t=>t.priority==="P0");
+  const openAlerts=state.alerts.filter(a=>(a.status||"open")==="open").length;
+  $("#sb-p0").innerHTML="P0: <b>"+esc(p0?p0.title:"n/d")+"</b>";
+  $("#sb-alerts").innerHTML="Alertas abertos: <b>"+openAlerts+"</b>";
+  const crit=state.lastCycle?.critical_company;
+  if(crit) $("#sb-critical").innerHTML="Frente crítica: <b>"+esc(crit.name)+"</b>";
+  $("#sb-ext").innerHTML="Ação externa: <b>0</b>";
+}
+
+/* ---- data loading ---- */
+async function getJSON(url){const r=await fetch(url,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error(url+" "+r.status);return r.json();}
+function pick(obj,key){if(Array.isArray(obj))return obj;if(obj&&Array.isArray(obj[key]))return obj[key];return [];}
+
+async function loadAll(initial){
+  try{
+    const [rm,ag,tk,al,co]=await Promise.all([
+      getJSON(ENDPOINTS.rooms),getJSON(ENDPOINTS.agents),getJSON(ENDPOINTS.tasks),
+      getJSON(ENDPOINTS.alerts),getJSON(ENDPOINTS.companies)]);
+    state.mode="live";
+    state.rooms=pick(rm,"rooms"); state.agents=pick(ag,"agents"); state.tasks=pick(tk,"tasks");
+    state.alerts=pick(al,"alerts"); state.companies=pick(co,"companies");
+  }catch(e){
+    state.mode="offline";
+    state.rooms=SNAPSHOT.rooms; state.agents=SNAPSHOT.agents; state.tasks=SNAPSHOT.tasks;
+    state.alerts=SNAPSHOT.alerts; state.companies=SNAPSHOT.companies;
+  }
+  enrichRooms();
+  setMode();
+  if(initial) buildWorld(); else buildTokens();
+  renderTasks(); renderStatusBar();
+}
+function enrichRooms(){
+  const cmap={}; state.companies.forEach(c=>cmap[c.id]=c);
+  state.rooms.forEach(r=>{const c=cmap[r.company_id];
+    r.company_risk = r.company_risk ?? (c?c.risk_level:0);
+    r.company_is_blocked = c?c.is_blocked:0;});
+}
+function setMode(){
+  const el=$("#mode");el.className="mode-pill "+state.mode;
+  $("#mode-label").textContent = state.mode==="live"?"AO VIVO · SQLite local":"PRÉVIA OFFLINE · snapshot v0.4.2";
+}
+
+/* ---- cycle ---- */
+async function runCycle(){
+  const btn=$("#btn-cycle"); btn.disabled=true;
+  if(state.mode==="offline"){ simulateCyclePreview(); btn.disabled=false; return; }
+  try{
+    const res=await fetch(ENDPOINTS.cycle,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    const data=await res.json(); applyCycle(data.cycle);
+  }catch(e){ toast("Falha ao rodar ciclo: "+e.message); }
+  finally{ btn.disabled=false; }
+}
+function applyCycle(cy){
+  if(!cy)return; state.lastCycle=cy;
+  $("#sb-cycle").innerHTML="Ciclo #"+cy.id+" · "+(cy.created_at||"");
+  state.criticalRoomId = cy.critical_task?.room_id || null;
+  state.criticalAgentId = cy.blocked_agent?.id || null;
+  if(cy.critical_company) $("#sb-critical").innerHTML="Frente crítica: <b>"+esc(cy.critical_company.name)+"</b>";
+  // bring the critical agent to centre stage (visual choreography), then home
+  if(state.criticalAgentId && state.rt[state.criticalAgentId]){
+    selectAgent(state.criticalAgentId);
+    walkTo(state.criticalAgentId, 6, 5.3);
+    setTimeout(()=>walkBackHome(state.criticalAgentId), 5200);
+  }
+  applySelectionStyles();
+  toast(cy.summary || "Ciclo concluído. Nenhuma ação externa executada.");
+}
+function simulateCyclePreview(){
+  // offline preview only: derive a plausible "critical" view from the snapshot itself (real rows)
+  const crit=[...state.companies].sort((a,b)=>(b.is_blocked-a.is_blocked)||(b.risk_level-a.risk_level))[0];
+  const p0=state.tasks.find(t=>t.priority==="P0")||state.tasks[0];
+  const blocked=state.agents.find(a=>a.is_blocked)||state.agents.find(a=>a.state&&a.state.includes("quarentena"));
+  applyCycle({id:"prévia",created_at:"offline",critical_company:crit,critical_task:p0,blocked_agent:blocked,
+    summary:"Prévia offline: frente crítica "+(crit?crit.name:"n/d")+". Conecte o servidor para rodar o ciclo real."});
+}
+
+/* ---- camera ---- */
+const cam={x:0,y:0,s:1};
+function applyCam(){$("#world").style.transform=`translate(${cam.x}px,${cam.y}px) scale(${cam.s})`;}
+function fit(){
+  const vp=$("#viewport").getBoundingClientRect();
+  cam.s=Math.min(1.15, Math.max(.42,(vp.width-40)/WORLD.w, (vp.height-80)/WORLD.h*0));
+  cam.s=Math.min((vp.width-40)/WORLD.w,(vp.height-120)/WORLD.h);
+  cam.s=Math.max(.4,Math.min(1.1,cam.s));
+  cam.x=(vp.width-WORLD.w*cam.s)/2; cam.y=(vp.height-WORLD.h*cam.s)/2-10; applyCam();
+}
+(function camControls(){
+  const stage=$("#stage"); let drag=null;
+  stage.addEventListener("pointerdown",e=>{if(e.target.closest(".agent")||e.target.closest(".zoomctl"))return;
+    drag={x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y};stage.classList.add("dragging");stage.setPointerCapture(e.pointerId);});
+  stage.addEventListener("pointermove",e=>{if(!drag)return;cam.x=drag.cx+(e.clientX-drag.x);cam.y=drag.cy+(e.clientY-drag.y);applyCam();});
+  stage.addEventListener("pointerup",()=>{drag=null;stage.classList.remove("dragging");});
+  stage.addEventListener("pointercancel",()=>{drag=null;stage.classList.remove("dragging");});
+  stage.addEventListener("click",e=>{if(e.target.id==="viewport"||e.target.id==="stage"){state.selectedAgentId=null;$("#insp-tag").textContent="nenhum";$("#inspector").innerHTML='<div class="empty">Clique num agente no escritório para ver sua ficha.</div>';applySelectionStyles();}});
+  stage.addEventListener("wheel",e=>{e.preventDefault();zoomAt(e.clientX,e.clientY,e.deltaY<0?1.12:1/1.12);},{passive:false});
+  $("#zoom-in").addEventListener("click",()=>{const r=$("#stage").getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1.18);});
+  $("#zoom-out").addEventListener("click",()=>{const r=$("#stage").getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1/1.18);});
+})();
+function zoomAt(px,py,f){
+  const stage=$("#stage").getBoundingClientRect(); const mx=px-stage.left,my=py-stage.top;
+  const ns=Math.max(.34,Math.min(1.7,cam.s*f)); const k=ns/cam.s;
+  cam.x=mx-(mx-cam.x)*k; cam.y=my-(my-cam.y)*k; cam.s=ns; applyCam();
+}
+
+/* ---- toast ---- */
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),5200);}
+
+/* ---- boot ---- */
+$("#btn-cycle").addEventListener("click",runCycle);
+$("#btn-refresh").addEventListener("click",()=>loadAll(false).then(()=>toast("Dados atualizados ("+state.mode+").")));
+$("#btn-reset").addEventListener("click",fit);
+window.addEventListener("resize",()=>{/* keep camera; just clamp */ applyCam();});
+
+(async function start(){
+  await loadAll(true);
+  fit();
+  // entrance: agents walk in from corridor to their rooms
+  state.agents.forEach((a,i)=>{const rt=state.rt[a.id];if(!rt)return;const h=rt.home;rt.gx=6;rt.gy=5.3;rt.tx=6;rt.ty=5.3;
+    setTimeout(()=>walkTo(a.id,h.gx,h.gy), reduced?0:120*i);});
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

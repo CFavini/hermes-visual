@@ -1,0 +1,308 @@
+/* Hermes v0.4.2 — Operational Memory Panel Styles */
+
+.memory-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  border-left: 1px solid #333;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.memory-panel:not(.hidden) {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.memory-panel.hidden {
+  pointer-events: none;
+}
+
+.memory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #333;
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.memory-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #fff;
+}
+
+.memory-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.memory-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #4a9eff;
+}
+
+.memory-section {
+  margin-bottom: 32px;
+}
+
+.memory-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.placeholder {
+  color: #666;
+  font-size: 12px;
+  text-align: center;
+  padding: 16px;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Agent Learning */
+.agent-learning-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.learning-item {
+  background: rgba(74, 158, 255, 0.05);
+  border-left: 3px solid #4a9eff;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #ddd;
+}
+
+.learning-label {
+  display: block;
+  font-weight: 600;
+  color: #4a9eff;
+  margin-bottom: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Sources List */
+.sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #ccc;
+}
+
+.source-title {
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.source-meta {
+  color: #888;
+  font-size: 10px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.source-badge {
+  display: inline-block;
+  background: rgba(74, 158, 255, 0.1);
+  color: #4a9eff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.source-status-ok {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.source-status-partial {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.source-status-quarantine {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+/* Uncertainties */
+.uncertainties-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uncertainty-item {
+  background: rgba(244, 67, 54, 0.05);
+  border-left: 3px solid #f44336;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #ddd;
+}
+
+.uncertainty-impact {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-right: 8px;
+}
+
+.impact-critico {
+  color: #ff6b6b;
+}
+
+.impact-alto {
+  color: #ffa726;
+}
+
+.impact-medio {
+  color: #ffc107;
+}
+
+.impact-baixo {
+  color: #78c850;
+}
+
+/* Cost Breakdown */
+.cost-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cost-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 11px;
+}
+
+.cost-provider {
+  color: #fff;
+  font-weight: 600;
+}
+
+.cost-amount {
+  color: #4a9eff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .memory-panel {
+    width: 100%;
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-top: 1px solid #333;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+    transform: translateY(100%);
+  }
+
+  .memory-panel:not(.hidden) {
+    transform: translateY(0);
+  }
+
+  .memory-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
